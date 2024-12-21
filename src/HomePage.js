@@ -1,8 +1,6 @@
 import { Search, X } from "lucide-react";
 import React, { useState } from "react";
 
-require("dotenv").config();
-
 const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
