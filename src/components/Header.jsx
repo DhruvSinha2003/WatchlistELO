@@ -14,9 +14,9 @@ const Header = ({ currentTheme, onThemeChange, currentFont, onFontChange }) => {
   ];
 
   const themeOptions = [
-    { value: "default", label: "Beige & Orange" },
-    { value: "light", label: "White & Blue" },
     { value: "dark", label: "Grey & Cyan" },
+    { value: "beige", label: "Beige & Orange" },
+    { value: "light", label: "White & Blue" },
   ];
 
   useEffect(() => {
