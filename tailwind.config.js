@@ -10,6 +10,7 @@ module.exports = {
         text: "var(--color-text)",
         "text-secondary": "var(--color-text-secondary)",
         "button-hover": "var(--color-button-hover)",
+        "button-disabled": "var(--color-button-disabled)",
       },
     },
   },

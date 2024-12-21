@@ -1,23 +1,30 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import Header from "./components/Header";
+import "./styles/themes.css";
 
 function App() {
+  const [theme, setTheme] = useState("default");
+  const [fontTheme, setFontTheme] = useState("modern");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  useEffect(() => {
+    document.body.className = `font-theme-${fontTheme}`;
+  }, [fontTheme]);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+    <div
+      className="min-h-screen bg-background text-text"
+      style={{ fontFamily: "var(--font-body)" }}
+    >
+      <Header
+        currentTheme={theme}
+        onThemeChange={setTheme}
+        currentFont={fontTheme}
+        onFontChange={setFontTheme}
+      />
     </div>
   );
 }
