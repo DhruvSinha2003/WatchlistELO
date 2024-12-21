@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Header from "./components/Header";
+import HomePage from "./HomePage";
 import "./styles/themes.css";
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
         currentFont={fontTheme}
         onFontChange={setFontTheme}
       />
+      <HomePage />
     </div>
   );
 }
