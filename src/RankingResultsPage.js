@@ -1,12 +1,51 @@
-import { ArrowDown, ArrowUp, Download } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Save } from "lucide-react";
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const RankingResultsPage = ({ movies, onStartOver }) => {
   const [sortOrder, setSortOrder] = useState("desc");
+  const [listName, setListName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
   const sortedMovies = [...movies].sort((a, b) => {
     return sortOrder === "desc" ? b.rating - a.rating : a.rating - b.rating;
   });
+
+  const saveList = async () => {
+    if (!listName.trim()) {
+      setError("Please enter a name for your list");
+      return;
+    }
+
+    setIsSaving(true);
+    setError("");
+
+    try {
+      const response = await fetch("/api/lists", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          name: listName,
+          movies: sortedMovies,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save list");
+      }
+
+      navigate("/lists");
+    } catch (err) {
+      setError("Failed to save list. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const exportRankings = () => {
     const rankingsText = sortedMovies
@@ -33,35 +72,56 @@ const RankingResultsPage = ({ movies, onStartOver }) => {
         </p>
       </div>
 
-      <div className="flex justify-between items-center gap-4">
-        <button
-          className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg hover:bg-button-hover transition-colors"
-          onClick={() =>
-            setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
-          }
-        >
-          Sort{" "}
-          {sortOrder === "desc" ? (
-            <ArrowDown className="w-4 h-4" />
-          ) : (
-            <ArrowUp className="w-4 h-4" />
-          )}
-        </button>
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={listName}
+            onChange={(e) => setListName(e.target.value)}
+            placeholder="Enter a name for your list"
+            className="px-4 py-2 bg-background border border-secondary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+        </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex justify-between items-center gap-4">
           <button
             className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg hover:bg-button-hover transition-colors"
-            onClick={onStartOver}
+            onClick={() =>
+              setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"))
+            }
           >
-            Start Over
+            Sort{" "}
+            {sortOrder === "desc" ? (
+              <ArrowDown className="w-4 h-4" />
+            ) : (
+              <ArrowUp className="w-4 h-4" />
+            )}
           </button>
-          <button
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-lg hover:bg-button-hover transition-colors"
-            onClick={exportRankings}
-          >
-            <Download className="w-4 h-4" />
-            Export List
-          </button>
+
+          <div className="flex items-center gap-4">
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg hover:bg-button-hover transition-colors"
+              onClick={onStartOver}
+            >
+              Start Over
+            </button>
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg hover:bg-button-hover transition-colors"
+              onClick={exportRankings}
+            >
+              <Download className="w-4 h-4" />
+              Export List
+            </button>
+            <button
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-background rounded-lg hover:bg-button-hover transition-colors disabled:opacity-50"
+              onClick={saveList}
+              disabled={isSaving}
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? "Saving..." : "Save List"}
+            </button>
+          </div>
         </div>
       </div>
 

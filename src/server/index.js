@@ -1,4 +1,3 @@
-// server/index.js
 const express = require("express");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
@@ -17,6 +16,35 @@ mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
 
+// Movie List Schema
+const movieListSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  name: {
+    type: String,
+    required: true,
+  },
+  movies: [
+    {
+      movieId: String,
+      title: String,
+      year: String,
+      poster: String,
+      rating: Number,
+      rank: Number,
+    },
+  ],
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const MovieList = mongoose.model("MovieList", movieListSchema);
+
 // User Schema
 const userSchema = new mongoose.Schema({
   username: {
@@ -33,15 +61,6 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  // Store user's movie rankings
-  movieRankings: [
-    {
-      movieId: String,
-      title: String,
-      rating: Number,
-      rankedAt: Date,
-    },
-  ],
 });
 
 const User = mongoose.model("User", userSchema);
@@ -66,17 +85,14 @@ app.post("/api/register", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Check if user exists
     const existingUser = await User.findOne({ username });
     if (existingUser) {
       return res.status(400).json({ message: "Username already exists" });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create user
     const user = new User({
       username,
       password: hashedPassword,
@@ -93,19 +109,16 @@ app.post("/api/login", async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    // Find user
     const user = await User.findOne({ username });
     if (!user) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Validate password
     const validPassword = await bcrypt.compare(password, user.password);
     if (!validPassword) {
       return res.status(400).json({ message: "Invalid credentials" });
     }
 
-    // Create token
     const token = jwt.sign(
       { id: user._id, username: user.username },
       process.env.JWT_SECRET
@@ -123,30 +136,52 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-// Movie ranking routes
-app.post("/api/rankings", authenticateToken, async (req, res) => {
+// Movie list routes
+app.post("/api/lists", authenticateToken, async (req, res) => {
   try {
-    const { movies } = req.body;
-    const user = await User.findById(req.user.id);
+    const { name, movies } = req.body;
 
-    user.movieRankings = movies.map((movie) => ({
-      movieId: movie.id,
-      title: movie.title,
-      rating: movie.rating,
-      rankedAt: new Date(),
-    }));
+    const movieList = new MovieList({
+      userId: req.user.id,
+      name,
+      movies: movies.map((movie, index) => ({
+        ...movie,
+        rank: index + 1,
+      })),
+    });
 
-    await user.save();
-    res.json({ message: "Rankings saved successfully" });
+    await movieList.save();
+    res
+      .status(201)
+      .json({ message: "List saved successfully", listId: movieList._id });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }
 });
 
-app.get("/api/rankings", authenticateToken, async (req, res) => {
+app.get("/api/lists", authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    res.json(user.movieRankings);
+    const lists = await MovieList.find({ userId: req.user.id }).sort({
+      createdAt: -1,
+    });
+    res.json(lists);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/api/lists/:id", authenticateToken, async (req, res) => {
+  try {
+    const list = await MovieList.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+    });
+
+    if (!list) {
+      return res.status(404).json({ message: "List not found" });
+    }
+
+    res.json(list);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }

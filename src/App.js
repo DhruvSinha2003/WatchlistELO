@@ -12,6 +12,7 @@ import EloRankingPage from "./EloRankingPage";
 import HomePage from "./HomePage";
 import IMDBImportPage from "./IMDBImportPage";
 import RankingResultsPage from "./RankingResultsPage";
+import SavedListsPage from "./SavedListsPage";
 import "./styles/themes.css";
 import { auth } from "./utils/auth";
 
@@ -26,6 +27,7 @@ function App() {
   const [selectedMovies, setSelectedMovies] = useState([]);
   const [rankedMovies, setRankedMovies] = useState([]);
   const [importedMovies, setImportedMovies] = useState([]);
+  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -43,56 +45,93 @@ function App() {
     setRankedMovies(rankedMovies);
   };
 
+  const handleImportComplete = (movies) => {
+    setImportedMovies(movies);
+    setShowImport(false);
+  };
+
+  const handleStartOver = () => {
+    setSelectedMovies([]);
+    setRankedMovies([]);
+    setImportedMovies([]);
+  };
+
   return (
     <Router>
-      <div>
+      <div className="min-h-screen bg-background text-text">
         <Header
           theme={theme}
           setTheme={setTheme}
           fontTheme={fontTheme}
           setFontTheme={setFontTheme}
         />
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route
-            path="/"
-            element={
-              <PrivateRoute>
-                <HomePage
-                  onMoviesSelected={handleMoviesSelected}
-                  initialMovies={importedMovies}
-                />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/ranking"
-            element={
-              <PrivateRoute>
-                <EloRankingPage
-                  movies={selectedMovies}
-                  onRankingComplete={handleRankingComplete}
-                />
-              </PrivateRoute>
-            }
-          />
-          <Route
-            path="/results"
-            element={
-              <PrivateRoute>
-                <RankingResultsPage
-                  movies={rankedMovies}
-                  onStartOver={() => {
-                    setSelectedMovies([]);
-                    setRankedMovies([]);
-                    setImportedMovies([]);
-                  }}
-                />
-              </PrivateRoute>
-            }
-          />
-        </Routes>
+        <main className="container mx-auto px-4 py-8">
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  {showImport ? (
+                    <IMDBImportPage
+                      onImportComplete={handleImportComplete}
+                      onCancel={() => setShowImport(false)}
+                    />
+                  ) : (
+                    <HomePage
+                      onMoviesSelected={handleMoviesSelected}
+                      onImportClick={() => setShowImport(true)}
+                      initialMovies={importedMovies}
+                    />
+                  )}
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/ranking"
+              element={
+                <PrivateRoute>
+                  {selectedMovies.length > 0 ? (
+                    <EloRankingPage
+                      movies={selectedMovies}
+                      onRankingComplete={handleRankingComplete}
+                    />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )}
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/results"
+              element={
+                <PrivateRoute>
+                  {rankedMovies.length > 0 ? (
+                    <RankingResultsPage
+                      movies={rankedMovies}
+                      onStartOver={handleStartOver}
+                    />
+                  ) : (
+                    <Navigate to="/" replace />
+                  )}
+                </PrivateRoute>
+              }
+            />
+
+            <Route
+              path="/lists"
+              element={
+                <PrivateRoute>
+                  <SavedListsPage onCreateNew={handleStartOver} />
+                </PrivateRoute>
+              }
+            />
+          </Routes>
+        </main>
       </div>
     </Router>
   );
