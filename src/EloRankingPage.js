@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 
 const K_FACTOR = 32;
 const RATING_DIFFERENCE_SCALE = 400;
+const CONFIDENCE_THRESHOLD = 0.85;
+const MIN_MATCHES_PER_ITEM = 3;
+const RATING_CERTAINTY_THRESHOLD = 100;
 
 const calculateExpectedScore = (ratingA, ratingB) => {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / RATING_DIFFERENCE_SCALE));
@@ -14,6 +17,69 @@ const calculateNewRating = (rating, expectedScore, actualScore) => {
 const createPairKey = (movieA, movieB) => {
   const ids = [movieA.id, movieB.id].sort();
   return ids.join("-");
+};
+
+const calculateUncertainty = (movie, allMovies) => {
+  if (movie.matches < MIN_MATCHES_PER_ITEM) return 1;
+
+  const ratingDiffs = allMovies
+    .filter((m) => m.id !== movie.id)
+    .map((m) => Math.abs(movie.rating - m.rating));
+
+  const avgRatingDiff =
+    ratingDiffs.reduce((a, b) => a + b, 0) / ratingDiffs.length;
+  return Math.min(1, RATING_CERTAINTY_THRESHOLD / avgRatingDiff);
+};
+
+const calculateSystemConfidence = (movies) => {
+  const uncertainties = movies.map((movie) =>
+    calculateUncertainty(movie, movies)
+  );
+  return 1 - uncertainties.reduce((a, b) => a + b, 0) / movies.length;
+};
+
+const getOptimalNextPair = (rankedMovies, comparedPairs) => {
+  const moviesByUncertainty = [...rankedMovies].sort(
+    (a, b) =>
+      calculateUncertainty(b, rankedMovies) -
+      calculateUncertainty(a, rankedMovies)
+  );
+
+  const candidatePairs = [];
+  const topUncertainMovies = moviesByUncertainty.slice(
+    0,
+    Math.ceil(rankedMovies.length * 0.3)
+  );
+
+  for (const movieA of topUncertainMovies) {
+    const potentialOpponents = rankedMovies
+      .filter((movieB) => {
+        if (movieB.id === movieA.id) return false;
+        const pairKey = createPairKey(movieA, movieB);
+        if (comparedPairs.has(pairKey)) return false;
+
+        const ratingDiff = Math.abs(movieA.rating - movieB.rating);
+        return ratingDiff < RATING_DIFFERENCE_SCALE;
+      })
+      .sort(
+        (a, b) =>
+          Math.abs(a.rating - movieA.rating) -
+          Math.abs(b.rating - movieA.rating)
+      );
+
+    if (potentialOpponents.length > 0) {
+      candidatePairs.push([movieA, potentialOpponents[0]]);
+    }
+  }
+
+  if (candidatePairs.length === 0) return null;
+  return candidatePairs[Math.floor(Math.random() * candidatePairs.length)];
+};
+
+const getTargetComparisons = (movieCount) => {
+  if (movieCount <= 20) return 80;
+  if (movieCount <= 50) return 150;
+  return 250;
 };
 
 const EloRankingPage = ({ movies = [], onRankingComplete }) => {
@@ -29,7 +95,8 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
   const [progress, setProgress] = useState(0);
   const [comparedPairs, setComparedPairs] = useState(new Set());
 
-  const totalComparisons = Math.ceil((movies.length * (movies.length - 1)) / 2);
+  const targetComparisons = getTargetComparisons(movies.length);
+
   useEffect(() => {
     if (rankedMovies.length >= 2) {
       selectNewPair();
@@ -37,18 +104,16 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
   }, [rankedMovies]);
 
   const selectNewPair = () => {
-    const availablePairs = [];
+    const systemConfidence = calculateSystemConfidence(rankedMovies);
+    const hasReachedTargetComparisons = comparedPairs.size >= targetComparisons;
+    const minMatchesReached = rankedMovies.every(
+      (m) => m.matches >= MIN_MATCHES_PER_ITEM
+    );
 
-    for (let i = 0; i < rankedMovies.length; i++) {
-      for (let j = i + 1; j < rankedMovies.length; j++) {
-        const pairKey = createPairKey(rankedMovies[i], rankedMovies[j]);
-        if (!comparedPairs.has(pairKey)) {
-          availablePairs.push([rankedMovies[i], rankedMovies[j]]);
-        }
-      }
-    }
-
-    if (availablePairs.length === 0) {
+    if (
+      (systemConfidence >= CONFIDENCE_THRESHOLD && minMatchesReached) ||
+      hasReachedTargetComparisons
+    ) {
       const sortedMovies = [...rankedMovies].sort(
         (a, b) => b.rating - a.rating
       );
@@ -56,14 +121,20 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
       return;
     }
 
-    const randomIndex = Math.floor(Math.random() * availablePairs.length);
-    const selectedPair = availablePairs[randomIndex];
-
-    if (Math.random() < 0.5) {
-      selectedPair.reverse();
+    const nextPair = getOptimalNextPair(rankedMovies, comparedPairs);
+    if (!nextPair) {
+      const sortedMovies = [...rankedMovies].sort(
+        (a, b) => b.rating - a.rating
+      );
+      onRankingComplete?.(sortedMovies);
+      return;
     }
 
-    setCurrentPair(selectedPair);
+    if (Math.random() < 0.5) {
+      nextPair.reverse();
+    }
+
+    setCurrentPair(nextPair);
   };
 
   const handleChoice = (winner, loser) => {
@@ -94,24 +165,18 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
         };
       }
       if (movie.id === loser.id) {
-        return { ...movie, rating: newLoserRating, matches: movie.matches + 1 };
+        return {
+          ...movie,
+          rating: newLoserRating,
+          matches: movie.matches + 1,
+        };
       }
       return movie;
     });
 
     setRankedMovies(updatedMovies);
-
-    const newProgress = (comparedPairs.size + 1) / totalComparisons;
-    setProgress(Math.min(newProgress, 1));
-
-    if (comparedPairs.size + 1 >= totalComparisons) {
-      const sortedMovies = [...updatedMovies].sort(
-        (a, b) => b.rating - a.rating
-      );
-      onRankingComplete?.(sortedMovies);
-    } else {
-      selectNewPair();
-    }
+    setProgress(Math.min(comparedPairs.size / targetComparisons, 1));
+    selectNewPair();
   };
 
   return (
