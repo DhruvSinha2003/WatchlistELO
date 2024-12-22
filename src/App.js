@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import Header from "./components/Header";
 import EloRankingPage from "./EloRankingPage";
 import HomePage from "./HomePage";
-import RankingResultsPage from "./RankingResultsPage.js";
+import IMDBImportPage from "./IMDBImportPage";
+import RankingResultsPage from "./RankingResultsPage";
 import "./styles/themes.css";
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
   const [currentPage, setCurrentPage] = useState("home");
   const [selectedMovies, setSelectedMovies] = useState([]);
   const [rankedMovies, setRankedMovies] = useState([]);
+  const [importedMovies, setImportedMovies] = useState([]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -30,10 +32,27 @@ function App() {
     setCurrentPage("results");
   };
 
+  const handleImportPage = () => {
+    setCurrentPage("import");
+  };
+
+  const handleImportComplete = (movies) => {
+    setImportedMovies(movies);
+    setCurrentPage("home");
+  };
+
   const renderCurrentPage = () => {
     switch (currentPage) {
       case "home":
-        return <HomePage onMoviesSelected={handleMoviesSelected} />;
+        return (
+          <HomePage
+            onMoviesSelected={handleMoviesSelected}
+            onImportClick={handleImportPage}
+            initialMovies={importedMovies}
+          />
+        );
+      case "import":
+        return <IMDBImportPage onMoviesImported={handleImportComplete} />;
       case "ranking":
         return (
           <EloRankingPage
@@ -48,12 +67,19 @@ function App() {
             onStartOver={() => {
               setSelectedMovies([]);
               setRankedMovies([]);
+              setImportedMovies([]);
               setCurrentPage("home");
             }}
           />
         );
       default:
-        return <HomePage onMoviesSelected={handleMoviesSelected} />;
+        return (
+          <HomePage
+            onMoviesSelected={handleMoviesSelected}
+            onImportClick={handleImportPage}
+            initialMovies={importedMovies}
+          />
+        );
     }
   };
 

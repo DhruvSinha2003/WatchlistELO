@@ -1,14 +1,31 @@
 import { Search, X } from "lucide-react";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
-const HomePage = ({ onMoviesSelected }) => {
+const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedMovies, setSelectedMovies] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const moviesPerPage = 20;
+
+  useEffect(() => {
+    if (initialMovies.length > 0) {
+      setSelectedMovies(initialMovies);
+    }
+  }, [initialMovies]);
+
+  // Calculate the movies to display based on current page
+  const indexOfLastMovie = currentPage * moviesPerPage;
+  const indexOfFirstMovie = indexOfLastMovie - moviesPerPage;
+  const currentMovies = selectedMovies.slice(
+    indexOfFirstMovie,
+    indexOfLastMovie
+  );
+  const totalPages = Math.ceil(selectedMovies.length / moviesPerPage);
 
   const searchMovies = async (query) => {
     if (!query.trim()) {
@@ -43,10 +60,7 @@ const HomePage = ({ onMoviesSelected }) => {
   };
 
   const addMovie = (movie) => {
-    if (
-      !selectedMovies.find((m) => m.id === movie.id) &&
-      selectedMovies.length < 20
-    ) {
+    if (!selectedMovies.find((m) => m.id === movie.id)) {
       setSelectedMovies([
         ...selectedMovies,
         {
@@ -67,6 +81,10 @@ const HomePage = ({ onMoviesSelected }) => {
     setSelectedMovies(selectedMovies.filter((m) => m.id !== movieId));
   };
 
+  const changePage = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
       <div className="text-center space-y-4">
@@ -77,8 +95,17 @@ const HomePage = ({ onMoviesSelected }) => {
           Create Your Movie List
         </h2>
         <p className="text-text-secondary">
-          Add at least 4 movies to start ranking (maximum 20)
+          Add at least 4 movies to start ranking
         </p>
+        <p className="text-text-secondary">
+          Total movies: {selectedMovies.length}
+        </p>
+        <button
+          onClick={onImportClick}
+          className="px-6 py-3 bg-secondary text-text rounded-lg hover:bg-secondary-hover transition-colors"
+        >
+          Import from IMDB
+        </button>
       </div>
 
       {/* Search Section */}
@@ -130,7 +157,7 @@ const HomePage = ({ onMoviesSelected }) => {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {selectedMovies.map((movie) => (
+        {currentMovies.map((movie) => (
           <div key={movie.id} className="relative group">
             <div className="aspect-[2/3] rounded-lg overflow-hidden border border-secondary">
               <img
@@ -152,6 +179,29 @@ const HomePage = ({ onMoviesSelected }) => {
           </div>
         ))}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex justify-center space-x-2">
+          <button
+            onClick={() => changePage(currentPage - 1)}
+            disabled={currentPage === 1}
+            className="px-4 py-2 rounded-lg bg-secondary disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="px-4 py-2">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            onClick={() => changePage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className="px-4 py-2 rounded-lg bg-secondary disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {selectedMovies.length >= 4 && (
         <div className="text-center">
