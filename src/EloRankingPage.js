@@ -175,7 +175,7 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
     });
 
     setRankedMovies(updatedMovies);
-    setProgress(Math.min(comparedPairs.size / targetComparisons, 1));
+    setProgress(Math.min((comparedPairs.size + 1) / targetComparisons, 1));
     selectNewPair();
   };
 

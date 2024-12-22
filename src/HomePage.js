@@ -18,7 +18,6 @@ const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
     }
   }, [initialMovies]);
 
-  // Calculate the movies to display based on current page
   const indexOfLastMovie = currentPage * moviesPerPage;
   const indexOfFirstMovie = indexOfLastMovie - moviesPerPage;
   const currentMovies = selectedMovies.slice(
