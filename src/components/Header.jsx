@@ -56,6 +56,12 @@ const Header = ({ currentTheme, onThemeChange, currentFont, onFontChange }) => {
           </a>
 
           <div className="flex items-center gap-4 text-text-secondary">
+            <span
+              className="text-sm"
+              style={{ fontFamily: "var(--font-body)" }}
+            >
+              by Dhruv Sinha
+            </span>
             <a
               href="https://github.com/DhruvSinha2003/WatchlistELO"
               target="_blank"
@@ -74,12 +80,6 @@ const Header = ({ currentTheme, onThemeChange, currentFont, onFontChange }) => {
             >
               <Linkedin className="w-5 h-5" />
             </a>
-            <span
-              className="text-sm"
-              style={{ fontFamily: "var(--font-body)" }}
-            >
-              by Dhruv Sinha
-            </span>
           </div>
         </div>
 
