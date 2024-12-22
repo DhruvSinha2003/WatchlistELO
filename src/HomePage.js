@@ -4,7 +4,7 @@ import React, { useState } from "react";
 const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
 const TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500";
 
-const HomePage = () => {
+const HomePage = ({ onMoviesSelected }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [selectedMovies, setSelectedMovies] = useState([]);
@@ -129,7 +129,6 @@ const HomePage = () => {
         )}
       </div>
 
-      {/* Selected Movies Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {selectedMovies.map((movie) => (
           <div key={movie.id} className="relative group">
@@ -154,12 +153,11 @@ const HomePage = () => {
         ))}
       </div>
 
-      {/* Start Button */}
       {selectedMovies.length >= 4 && (
         <div className="text-center">
           <button
             className="px-6 py-3 bg-primary text-background rounded-lg hover:bg-button-hover transition-colors"
-            onClick={() => console.log("Start ranking")}
+            onClick={() => onMoviesSelected(selectedMovies)}
           >
             Start Ranking ({selectedMovies.length} movies)
           </button>
