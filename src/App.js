@@ -1,15 +1,28 @@
 import React, { useEffect, useState } from "react";
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from "react-router-dom";
 import Header from "./components/Header";
+import { LoginPage } from "./components/LoginPage";
+import { RegisterPage } from "./components/RegisterPage";
 import EloRankingPage from "./EloRankingPage";
 import HomePage from "./HomePage";
 import IMDBImportPage from "./IMDBImportPage";
 import RankingResultsPage from "./RankingResultsPage";
 import "./styles/themes.css";
+import { auth } from "./utils/auth";
+
+const PrivateRoute = ({ children }) => {
+  const user = auth.getCurrentUser();
+  return user ? children : <Navigate to="/login" />;
+};
 
 function App() {
   const [theme, setTheme] = useState("dark");
   const [fontTheme, setFontTheme] = useState("modern");
-  const [currentPage, setCurrentPage] = useState("home");
   const [selectedMovies, setSelectedMovies] = useState([]);
   const [rankedMovies, setRankedMovies] = useState([]);
   const [importedMovies, setImportedMovies] = useState([]);
@@ -24,78 +37,64 @@ function App() {
 
   const handleMoviesSelected = (movies) => {
     setSelectedMovies(movies);
-    setCurrentPage("ranking");
   };
 
   const handleRankingComplete = (rankedMovies) => {
     setRankedMovies(rankedMovies);
-    setCurrentPage("results");
-  };
-
-  const handleImportPage = () => {
-    setCurrentPage("import");
-  };
-
-  const handleImportComplete = (movies) => {
-    setImportedMovies(movies);
-    setCurrentPage("home");
-  };
-
-  const renderCurrentPage = () => {
-    switch (currentPage) {
-      case "home":
-        return (
-          <HomePage
-            onMoviesSelected={handleMoviesSelected}
-            onImportClick={handleImportPage}
-            initialMovies={importedMovies}
-          />
-        );
-      case "import":
-        return <IMDBImportPage onMoviesImported={handleImportComplete} />;
-      case "ranking":
-        return (
-          <EloRankingPage
-            movies={selectedMovies}
-            onRankingComplete={handleRankingComplete}
-          />
-        );
-      case "results":
-        return (
-          <RankingResultsPage
-            movies={rankedMovies}
-            onStartOver={() => {
-              setSelectedMovies([]);
-              setRankedMovies([]);
-              setImportedMovies([]);
-              setCurrentPage("home");
-            }}
-          />
-        );
-      default:
-        return (
-          <HomePage
-            onMoviesSelected={handleMoviesSelected}
-            onImportClick={handleImportPage}
-            initialMovies={importedMovies}
-          />
-        );
-    }
   };
 
   return (
-    <div
-      className="min-h-screen bg-background text-text"
-      style={{ fontFamily: "var(--font-body)" }}
-    >
-      <Header
-        currentTheme={theme}
-        onThemeChange={setTheme}
-        currentFont={fontTheme}
-        onFontChange={setFontTheme}
-      />
-      {renderCurrentPage()}
-    </div>
+    <Router>
+      <div>
+        <Header
+          theme={theme}
+          setTheme={setTheme}
+          fontTheme={fontTheme}
+          setFontTheme={setFontTheme}
+        />
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route
+            path="/"
+            element={
+              <PrivateRoute>
+                <HomePage
+                  onMoviesSelected={handleMoviesSelected}
+                  initialMovies={importedMovies}
+                />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/ranking"
+            element={
+              <PrivateRoute>
+                <EloRankingPage
+                  movies={selectedMovies}
+                  onRankingComplete={handleRankingComplete}
+                />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/results"
+            element={
+              <PrivateRoute>
+                <RankingResultsPage
+                  movies={rankedMovies}
+                  onStartOver={() => {
+                    setSelectedMovies([]);
+                    setRankedMovies([]);
+                    setImportedMovies([]);
+                  }}
+                />
+              </PrivateRoute>
+            }
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 
