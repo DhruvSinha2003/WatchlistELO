@@ -1,7 +1,5 @@
-import { Trophy } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
-// ELO calculation constants
 const K_FACTOR = 32;
 const RATING_DIFFERENCE_SCALE = 400;
 
@@ -13,50 +11,66 @@ const calculateNewRating = (rating, expectedScore, actualScore) => {
   return Math.round(rating + K_FACTOR * (actualScore - expectedScore));
 };
 
+const createPairKey = (movieA, movieB) => {
+  const ids = [movieA.id, movieB.id].sort();
+  return ids.join("-");
+};
+
 const EloRankingPage = ({ movies = [], onRankingComplete }) => {
-  // Initialize movies with ELO ratings
   const [rankedMovies, setRankedMovies] = useState(() =>
     movies.map((movie) => ({
       ...movie,
-      rating: 1400, // Starting ELO rating
+      rating: 1400,
       matches: 0,
     }))
   );
 
   const [currentPair, setCurrentPair] = useState([]);
   const [progress, setProgress] = useState(0);
-  const [isComplete, setIsComplete] = useState(false);
+  const [comparedPairs, setComparedPairs] = useState(new Set());
 
-  // Calculate total needed comparisons (n * log n is usually sufficient)
-  const totalComparisons = Math.ceil(movies.length * Math.log2(movies.length));
-  const [comparisonsCount, setComparisonsCount] = useState(0);
+  const totalComparisons = Math.ceil((movies.length * (movies.length - 1)) / 2);
 
   useEffect(() => {
-    if (rankedMovies.length >= 2 && !isComplete) {
+    if (rankedMovies.length >= 2) {
       selectNewPair();
     }
-  }, [rankedMovies, isComplete]);
+  }, [rankedMovies]);
 
   const selectNewPair = () => {
-    // Prioritize movies with fewer matches
-    const sortedByMatches = [...rankedMovies].sort(
-      (a, b) => a.matches - b.matches
-    );
+    const availablePairs = [];
 
-    // Select first movie from those with fewest matches
-    const minMatches = sortedByMatches[0].matches;
-    const candidatesA = sortedByMatches.filter((m) => m.matches === minMatches);
-    const movieA = candidatesA[Math.floor(Math.random() * candidatesA.length)];
+    for (let i = 0; i < rankedMovies.length; i++) {
+      for (let j = i + 1; j < rankedMovies.length; j++) {
+        const pairKey = createPairKey(rankedMovies[i], rankedMovies[j]);
+        if (!comparedPairs.has(pairKey)) {
+          availablePairs.push([rankedMovies[i], rankedMovies[j]]);
+        }
+      }
+    }
 
-    // Find opponent close in rating
-    const remainingMovies = rankedMovies.filter((m) => m.id !== movieA.id);
-    const movieB =
-      remainingMovies[Math.floor(Math.random() * remainingMovies.length)];
+    if (availablePairs.length === 0) {
+      const sortedMovies = [...rankedMovies].sort(
+        (a, b) => b.rating - a.rating
+      );
+      onRankingComplete?.(sortedMovies);
+      return;
+    }
 
-    setCurrentPair([movieA, movieB]);
+    const randomIndex = Math.floor(Math.random() * availablePairs.length);
+    const selectedPair = availablePairs[randomIndex];
+
+    if (Math.random() < 0.5) {
+      selectedPair.reverse();
+    }
+
+    setCurrentPair(selectedPair);
   };
 
   const handleChoice = (winner, loser) => {
+    const pairKey = createPairKey(winner, loser);
+    setComparedPairs((prev) => new Set([...prev, pairKey]));
+
     const expectedScoreWinner = calculateExpectedScore(
       winner.rating,
       loser.rating
@@ -87,13 +101,11 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
     });
 
     setRankedMovies(updatedMovies);
-    setComparisonsCount((prev) => prev + 1);
 
-    const newProgress = (comparisonsCount + 1) / totalComparisons;
+    const newProgress = (comparedPairs.size + 1) / totalComparisons;
     setProgress(Math.min(newProgress, 1));
 
-    if (comparisonsCount + 1 >= totalComparisons) {
-      setIsComplete(true);
+    if (comparedPairs.size + 1 >= totalComparisons) {
       const sortedMovies = [...updatedMovies].sort(
         (a, b) => b.rating - a.rating
       );
@@ -102,28 +114,6 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
       selectNewPair();
     }
   };
-
-  if (isComplete) {
-    return (
-      <div className="text-center p-8">
-        <Trophy className="w-16 h-16 mx-auto mb-4 text-primary" />
-        <h2 className="text-2xl font-bold mb-4">Ranking Complete!</h2>
-        <p className="text-text-secondary mb-6">
-          Your movies have been ranked based on your preferences.
-        </p>
-        <button
-          className="px-6 py-3 bg-primary text-background rounded-lg hover:bg-button-hover transition-colors"
-          onClick={() =>
-            onRankingComplete?.(
-              rankedMovies.sort((a, b) => b.rating - a.rating)
-            )
-          }
-        >
-          View Results
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">

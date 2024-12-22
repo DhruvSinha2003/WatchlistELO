@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Download, Share2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Download } from "lucide-react";
 import React, { useState } from "react";
 
 const RankingResultsPage = ({ movies, onStartOver }) => {
