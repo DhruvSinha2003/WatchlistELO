@@ -18,7 +18,8 @@ const IMDBImportPage = ({ onMoviesImported }) => {
 
     try {
       const text = await file.text();
-      const lines = text.split("\n");
+      // Split by newline but filter out empty lines first
+      const lines = text.split("\n").filter((line) => line.trim().length > 0);
       const headers = lines[0].split(",");
 
       // Find required column indices
@@ -33,8 +34,9 @@ const IMDBImportPage = ({ onMoviesImported }) => {
       // Filter out header and empty lines, and only keep movies
       const movieLines = lines.slice(1).filter((line) => {
         const columns = line.split(",");
+        // Make sure we have enough columns and it's a movie
         return (
-          line.trim() &&
+          columns.length >= Math.max(titleIndex, yearIndex, titleTypeIndex) &&
           (!titleTypeIndex ||
             columns[titleTypeIndex].toLowerCase().includes("movie"))
         );
@@ -47,20 +49,29 @@ const IMDBImportPage = ({ onMoviesImported }) => {
 
       for (let i = 0; i < movieLines.length; i++) {
         const columns = movieLines[i].split(",");
-        const title = columns[titleIndex].replace(/"/g, "").trim();
+        // Handle titles that might contain commas by checking for quotes
+        let title = columns[titleIndex];
+        if (title.startsWith('"')) {
+          // Find the closing quote
+          let j = titleIndex;
+          while (j < columns.length && !columns[j].endsWith('"')) {
+            j++;
+          }
+          title = columns.slice(titleIndex, j + 1).join(",");
+          title = title.replace(/^"|"$/g, "").trim();
+        } else {
+          title = title.trim();
+        }
+
         const year =
           yearIndex !== -1 ? columns[yearIndex].replace(/"/g, "").trim() : "";
 
         if (title) {
           try {
-            const searchQuery = year ? `${title} ${year}` : title;
-
             const searchResponse = await fetch(
               `https://api.themoviedb.org/3/search/movie?api_key=${
                 process.env.REACT_APP_TMDB_API_KEY
-              }&query=${encodeURIComponent(searchQuery)}&include_adult=false${
-                year ? `&year=${year}` : ""
-              }`
+              }&query=${encodeURIComponent(title)}&include_adult=false`
             );
 
             if (!searchResponse.ok) {
@@ -81,9 +92,9 @@ const IMDBImportPage = ({ onMoviesImported }) => {
                   ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
                   : "/api/placeholder/200/300",
               });
-              console.log(`✓ Matched: ${title} (${year})`);
+              console.log(`✓ Matched: ${title}`);
             } else {
-              console.log(`✗ No match: ${title} (${year})`);
+              console.log(`✗ No match: ${title}`);
               unmatched.push({ title, year });
             }
           } catch (error) {

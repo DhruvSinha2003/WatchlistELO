@@ -30,7 +30,6 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
   const [comparedPairs, setComparedPairs] = useState(new Set());
 
   const totalComparisons = Math.ceil((movies.length * (movies.length - 1)) / 2);
-
   useEffect(() => {
     if (rankedMovies.length >= 2) {
       selectNewPair();
@@ -116,8 +115,8 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 space-y-8">
-      <div className="text-center space-y-4">
+    <div className="h-[calc(100vh-64px)] flex flex-col">
+      <div className="text-center space-y-2 p-4">
         <h2 className="text-xl font-bold">Choose Your Preferred Movie</h2>
         <div className="w-full bg-secondary rounded-full h-2">
           <div
@@ -131,31 +130,41 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
       </div>
 
       {currentPair.length === 2 && (
-        <div className="grid md:grid-cols-2 gap-8">
-          {currentPair.map((movie) => (
-            <div
-              key={movie.id}
-              onClick={() =>
-                handleChoice(
-                  movie,
-                  currentPair.find((m) => m.id !== movie.id)
-                )
-              }
-              className="bg-background border border-secondary rounded-lg p-6 cursor-pointer transform transition-transform hover:scale-105"
-            >
-              <div className="aspect-[2/3] rounded-lg overflow-hidden border border-secondary mb-4">
-                <img
-                  src={movie.poster}
-                  alt={movie.title}
-                  className="w-full h-full object-cover"
-                />
+        <div className="flex-1 flex items-center justify-center min-h-0">
+          <div className="grid grid-cols-2 gap-4 p-4 w-full max-w-3xl h-full max-h-full">
+            {currentPair.map((movie) => (
+              <div
+                key={movie.id}
+                onClick={() =>
+                  handleChoice(
+                    movie,
+                    currentPair.find((m) => m.id !== movie.id)
+                  )
+                }
+                className="flex flex-col h-full bg-background border border-secondary rounded-lg p-3 cursor-pointer transform transition-transform hover:scale-105"
+              >
+                <div className="relative flex-1 min-h-0">
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="h-full max-h-full rounded-lg overflow-hidden border border-secondary">
+                      <img
+                        src={movie.poster}
+                        alt={movie.title}
+                        className="w-full h-full object-contain p-1"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <h3 className="font-bold text-lg text-center line-clamp-1">
+                    {movie.title}
+                  </h3>
+                  <p className="text-text-secondary text-center">
+                    {movie.year}
+                  </p>
+                </div>
               </div>
-              <h3 className="font-bold text-lg mb-2 text-center">
-                {movie.title}
-              </h3>
-              <p className="text-text-secondary text-center">{movie.year}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
