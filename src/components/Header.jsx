@@ -2,7 +2,6 @@ import { Github, Linkedin, Settings } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 
 const Header = ({ currentTheme, onThemeChange, currentFont, onFontChange }) => {
-  const [showTooltip, setShowTooltip] = useState(false);
   const [showCustomize, setShowCustomize] = useState(false);
   const customizeButtonRef = useRef(null);
   const [trayPosition, setTrayPosition] = useState({ top: 0, right: 0 });
@@ -92,27 +91,6 @@ const Header = ({ currentTheme, onThemeChange, currentFont, onFontChange }) => {
           >
             <Settings className="w-5 h-5 text-primary" />
           </button>
-
-          <div className="relative">
-            <button
-              onMouseEnter={() => setShowTooltip(true)}
-              onMouseLeave={() => setShowTooltip(false)}
-              className="px-4 py-2 bg-button-disabled text-background rounded cursor-not-allowed"
-              style={{ fontFamily: "var(--font-body)" }}
-            >
-              Login
-            </button>
-
-            {showTooltip && (
-              <div
-                className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-1 bg-text text-background text-sm rounded shadow-lg whitespace-nowrap"
-                style={{ fontFamily: "var(--font-body)" }}
-              >
-                Under Development
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-b-text"></div>
-              </div>
-            )}
-          </div>
         </div>
 
         {showCustomize && (
