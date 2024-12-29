@@ -18,7 +18,6 @@ const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
     }
   }, [initialMovies]);
 
-  // Calculate the movies to display based on current page
   const indexOfLastMovie = currentPage * moviesPerPage;
   const indexOfFirstMovie = indexOfLastMovie - moviesPerPage;
   const currentMovies = selectedMovies.slice(
@@ -122,7 +121,6 @@ const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
           <Search className="absolute left-3 top-3.5 h-5 w-5 text-text-secondary" />
         </div>
 
-        {/* Search Results */}
         {searchResults.length > 0 && searchQuery && (
           <div className="absolute z-10 w-full mt-2 bg-background border border-secondary rounded-lg shadow-lg max-h-96 overflow-y-auto">
             {searchResults.map((movie) => (

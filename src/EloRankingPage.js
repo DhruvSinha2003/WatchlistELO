@@ -5,6 +5,7 @@ const RATING_DIFFERENCE_SCALE = 400;
 const CONFIDENCE_THRESHOLD = 0.85;
 const MIN_MATCHES_PER_ITEM = 3;
 const RATING_CERTAINTY_THRESHOLD = 100;
+const SMALL_COLLECTION_THRESHOLD = 10;
 
 const calculateExpectedScore = (ratingA, ratingB) => {
   return 1 / (1 + Math.pow(10, (ratingB - ratingA) / RATING_DIFFERENCE_SCALE));
@@ -38,7 +39,28 @@ const calculateSystemConfidence = (movies) => {
   return 1 - uncertainties.reduce((a, b) => a + b, 0) / movies.length;
 };
 
-const getOptimalNextPair = (rankedMovies, comparedPairs) => {
+const getAllPossiblePairs = (movies) => {
+  const pairs = [];
+  for (let i = 0; i < movies.length; i++) {
+    for (let j = i + 1; j < movies.length; j++) {
+      pairs.push([movies[i], movies[j]]);
+    }
+  }
+  return pairs;
+};
+
+const getOptimalNextPair = (rankedMovies, comparedPairs, isSmallCollection) => {
+  if (isSmallCollection) {
+    // For small collections, get all possible pairs that haven't been compared
+    const allPairs = getAllPossiblePairs(rankedMovies);
+    const remainingPairs = allPairs.filter(
+      ([movieA, movieB]) => !comparedPairs.has(createPairKey(movieA, movieB))
+    );
+    if (remainingPairs.length === 0) return null;
+    return remainingPairs[Math.floor(Math.random() * remainingPairs.length)];
+  }
+
+  // For larger collections, use the selective matching strategy
   const moviesByUncertainty = [...rankedMovies].sort(
     (a, b) =>
       calculateUncertainty(b, rankedMovies) -
@@ -77,6 +99,10 @@ const getOptimalNextPair = (rankedMovies, comparedPairs) => {
 };
 
 const getTargetComparisons = (movieCount) => {
+  if (movieCount <= SMALL_COLLECTION_THRESHOLD) {
+    // For small collections, compare all possible pairs
+    return (movieCount * (movieCount - 1)) / 2;
+  }
   if (movieCount <= 20) return 80;
   if (movieCount <= 50) return 150;
   return 250;
@@ -95,6 +121,7 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
   const [progress, setProgress] = useState(0);
   const [comparedPairs, setComparedPairs] = useState(new Set());
 
+  const isSmallCollection = movies.length <= SMALL_COLLECTION_THRESHOLD;
   const targetComparisons = getTargetComparisons(movies.length);
 
   useEffect(() => {
@@ -121,7 +148,11 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
       return;
     }
 
-    const nextPair = getOptimalNextPair(rankedMovies, comparedPairs);
+    const nextPair = getOptimalNextPair(
+      rankedMovies,
+      comparedPairs,
+      isSmallCollection
+    );
     if (!nextPair) {
       const sortedMovies = [...rankedMovies].sort(
         (a, b) => b.rating - a.rating
