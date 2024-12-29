@@ -1,4 +1,4 @@
-import { Search, X } from "lucide-react";
+import { Loader, Search, X } from "lucide-react";
 import React, { useEffect, useState } from "react";
 
 const TMDB_API_KEY = process.env.REACT_APP_TMDB_API_KEY;
@@ -118,7 +118,11 @@ const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
             className="w-full px-10 py-3 bg-background border border-secondary rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
             style={{ fontFamily: "var(--font-body)" }}
           />
-          <Search className="absolute left-3 top-3.5 h-5 w-5 text-text-secondary" />
+          {isSearching ? (
+            <Loader className="absolute left-3 top-3.5 h-5 w-5 text-text-secondary animate-spin" />
+          ) : (
+            <Search className="absolute left-3 top-3.5 h-5 w-5 text-text-secondary" />
+          )}
         </div>
 
         {searchResults.length > 0 && searchQuery && (

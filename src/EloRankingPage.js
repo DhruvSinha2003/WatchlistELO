@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 
 const K_FACTOR = 32;
 const RATING_DIFFERENCE_SCALE = 400;
@@ -60,7 +60,6 @@ const getOptimalNextPair = (rankedMovies, comparedPairs, isSmallCollection) => {
     return remainingPairs[Math.floor(Math.random() * remainingPairs.length)];
   }
 
-  // For larger collections, use the selective matching strategy
   const moviesByUncertainty = [...rankedMovies].sort(
     (a, b) =>
       calculateUncertainty(b, rankedMovies) -
@@ -100,7 +99,6 @@ const getOptimalNextPair = (rankedMovies, comparedPairs, isSmallCollection) => {
 
 const getTargetComparisons = (movieCount) => {
   if (movieCount <= SMALL_COLLECTION_THRESHOLD) {
-    // For small collections, compare all possible pairs
     return (movieCount * (movieCount - 1)) / 2;
   }
   if (movieCount <= 20) return 80;
@@ -124,13 +122,7 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
   const isSmallCollection = movies.length <= SMALL_COLLECTION_THRESHOLD;
   const targetComparisons = getTargetComparisons(movies.length);
 
-  useEffect(() => {
-    if (rankedMovies.length >= 2) {
-      selectNewPair();
-    }
-  }, [rankedMovies]);
-
-  const selectNewPair = () => {
+  const selectNewPair = useCallback(() => {
     const systemConfidence = calculateSystemConfidence(rankedMovies);
     const hasReachedTargetComparisons = comparedPairs.size >= targetComparisons;
     const minMatchesReached = rankedMovies.every(
@@ -166,49 +158,64 @@ const EloRankingPage = ({ movies = [], onRankingComplete }) => {
     }
 
     setCurrentPair(nextPair);
-  };
+  }, [
+    rankedMovies,
+    comparedPairs,
+    targetComparisons,
+    isSmallCollection,
+    onRankingComplete,
+  ]);
 
-  const handleChoice = (winner, loser) => {
-    const pairKey = createPairKey(winner, loser);
-    setComparedPairs((prev) => new Set([...prev, pairKey]));
+  useEffect(() => {
+    if (rankedMovies.length >= 2) {
+      selectNewPair();
+    }
+  }, [rankedMovies, selectNewPair]);
 
-    const expectedScoreWinner = calculateExpectedScore(
-      winner.rating,
-      loser.rating
-    );
-    const newWinnerRating = calculateNewRating(
-      winner.rating,
-      expectedScoreWinner,
-      1
-    );
-    const newLoserRating = calculateNewRating(
-      loser.rating,
-      1 - expectedScoreWinner,
-      0
-    );
+  const handleChoice = useCallback(
+    (winner, loser) => {
+      const pairKey = createPairKey(winner, loser);
+      setComparedPairs((prev) => new Set([...prev, pairKey]));
 
-    const updatedMovies = rankedMovies.map((movie) => {
-      if (movie.id === winner.id) {
-        return {
-          ...movie,
-          rating: newWinnerRating,
-          matches: movie.matches + 1,
-        };
-      }
-      if (movie.id === loser.id) {
-        return {
-          ...movie,
-          rating: newLoserRating,
-          matches: movie.matches + 1,
-        };
-      }
-      return movie;
-    });
+      const expectedScoreWinner = calculateExpectedScore(
+        winner.rating,
+        loser.rating
+      );
+      const newWinnerRating = calculateNewRating(
+        winner.rating,
+        expectedScoreWinner,
+        1
+      );
+      const newLoserRating = calculateNewRating(
+        loser.rating,
+        1 - expectedScoreWinner,
+        0
+      );
 
-    setRankedMovies(updatedMovies);
-    setProgress(Math.min(comparedPairs.size / targetComparisons, 1));
-    selectNewPair();
-  };
+      const updatedMovies = rankedMovies.map((movie) => {
+        if (movie.id === winner.id) {
+          return {
+            ...movie,
+            rating: newWinnerRating,
+            matches: movie.matches + 1,
+          };
+        }
+        if (movie.id === loser.id) {
+          return {
+            ...movie,
+            rating: newLoserRating,
+            matches: movie.matches + 1,
+          };
+        }
+        return movie;
+      });
+
+      setRankedMovies(updatedMovies);
+      setProgress(Math.min(comparedPairs.size / targetComparisons, 1));
+      selectNewPair();
+    },
+    [rankedMovies, comparedPairs, targetComparisons, selectNewPair]
+  );
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">

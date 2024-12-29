@@ -10,130 +10,134 @@ const IMDBImportPage = ({ onMoviesImported }) => {
   const [processedMovies, setProcessedMovies] = useState(0);
   const [unmatchedMovies, setUnmatchedMovies] = useState([]);
 
-  const processCSV = async (file) => {
-    setIsProcessing(true);
-    setError(null);
-    setProgress(0);
-    setUnmatchedMovies([]);
+  const processCSV = useCallback(
+    async (file) => {
+      setIsProcessing(true);
+      setError(null);
+      setProgress(0);
+      setUnmatchedMovies([]);
 
-    try {
-      const text = await file.text();
-      // Split by newline but filter out empty lines first
-      const lines = text.split("\n").filter((line) => line.trim().length > 0);
-      const headers = lines[0].split(",");
+      try {
+        const text = await file.text();
+        // Split by newline but filter out empty lines first
+        const lines = text.split("\n").filter((line) => line.trim().length > 0);
+        const headers = lines[0].split(",");
 
-      // Find required column indices
-      const titleIndex = headers.indexOf("Title");
-      const yearIndex = headers.indexOf("Year");
-      const titleTypeIndex = headers.indexOf("Title Type");
+        // Find required column indices
+        const titleIndex = headers.indexOf("Title");
+        const yearIndex = headers.indexOf("Year");
+        const titleTypeIndex = headers.indexOf("Title Type");
 
-      if (titleIndex === -1) {
-        throw new Error("Invalid IMDB CSV format: Missing Title column");
-      }
-
-      // Filter out header and empty lines, and only keep movies
-      const movieLines = lines.slice(1).filter((line) => {
-        const columns = line.split(",");
-        // Make sure we have enough columns and it's a movie
-        return (
-          columns.length >= Math.max(titleIndex, yearIndex, titleTypeIndex) &&
-          (!titleTypeIndex ||
-            columns[titleTypeIndex].toLowerCase().includes("movie"))
-        );
-      });
-
-      console.log(`Total movies found in CSV: ${movieLines.length}`);
-      setTotalMovies(movieLines.length);
-      const movies = [];
-      const unmatched = [];
-
-      for (let i = 0; i < movieLines.length; i++) {
-        const columns = movieLines[i].split(",");
-        // Handle titles that might contain commas by checking for quotes
-        let title = columns[titleIndex];
-        if (title.startsWith('"')) {
-          // Find the closing quote
-          let j = titleIndex;
-          while (j < columns.length && !columns[j].endsWith('"')) {
-            j++;
-          }
-          title = columns.slice(titleIndex, j + 1).join(",");
-          title = title.replace(/^"|"$/g, "").trim();
-        } else {
-          title = title.trim();
+        if (titleIndex === -1) {
+          throw new Error("Invalid IMDB CSV format: Missing Title column");
         }
 
-        const year =
-          yearIndex !== -1 ? columns[yearIndex].replace(/"/g, "").trim() : "";
+        const movieLines = lines.slice(1).filter((line) => {
+          const columns = line.split(",");
+          return (
+            columns.length >= Math.max(titleIndex, yearIndex, titleTypeIndex) &&
+            (!titleTypeIndex ||
+              columns[titleTypeIndex].toLowerCase().includes("movie"))
+          );
+        });
 
-        if (title) {
-          try {
-            const searchResponse = await fetch(
-              `https://api.themoviedb.org/3/search/movie?api_key=${
-                process.env.REACT_APP_TMDB_API_KEY
-              }&query=${encodeURIComponent(title)}&include_adult=false`
-            );
+        console.log(`Total movies found in CSV: ${movieLines.length}`);
+        setTotalMovies(movieLines.length);
+        const movies = [];
+        const unmatched = [];
 
-            if (!searchResponse.ok) {
-              throw new Error(`TMDB API error: ${searchResponse.status}`);
+        for (let i = 0; i < movieLines.length; i++) {
+          const columns = movieLines[i].split(",");
+          // Handle titles that might contain commas by checking for quotes
+          let title = columns[titleIndex];
+          if (title.startsWith('"')) {
+            // Find the closing quote
+            let j = titleIndex;
+            while (j < columns.length && !columns[j].endsWith('"')) {
+              j++;
             }
+            title = columns.slice(titleIndex, j + 1).join(",");
+            title = title.replace(/^"|"$/g, "").trim();
+          } else {
+            title = title.trim();
+          }
 
-            const searchData = await searchResponse.json();
+          const year =
+            yearIndex !== -1 ? columns[yearIndex].replace(/"/g, "").trim() : "";
 
-            if (searchData.results && searchData.results[0]) {
-              const movie = searchData.results[0];
-              movies.push({
-                id: movie.id,
-                title: movie.title,
-                year: movie.release_date
-                  ? movie.release_date.split("-")[0]
-                  : year,
-                poster: movie.poster_path
-                  ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
-                  : "/api/placeholder/200/300",
-              });
-              console.log(`✓ Matched: ${title}`);
-            } else {
-              console.log(`✗ No match: ${title}`);
+          if (title) {
+            try {
+              const searchResponse = await fetch(
+                `https://api.themoviedb.org/3/search/movie?api_key=${
+                  process.env.REACT_APP_TMDB_API_KEY
+                }&query=${encodeURIComponent(title)}&include_adult=false`
+              );
+
+              if (!searchResponse.ok) {
+                throw new Error(`TMDB API error: ${searchResponse.status}`);
+              }
+
+              const searchData = await searchResponse.json();
+
+              if (searchData.results && searchData.results[0]) {
+                const movie = searchData.results[0];
+                movies.push({
+                  id: movie.id,
+                  title: movie.title,
+                  year: movie.release_date
+                    ? movie.release_date.split("-")[0]
+                    : year,
+                  poster: movie.poster_path
+                    ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+                    : "/api/placeholder/200/300",
+                });
+                console.log(`✓ Matched: ${title}`);
+              } else {
+                console.log(`✗ No match: ${title}`);
+                unmatched.push({ title, year });
+              }
+            } catch (error) {
+              console.error(`Error processing movie "${title}":`, error);
               unmatched.push({ title, year });
             }
-          } catch (error) {
-            console.error(`Error processing movie "${title}":`, error);
-            unmatched.push({ title, year });
           }
+
+          setProcessedMovies(i + 1);
+          setProgress(((i + 1) / movieLines.length) * 100);
+
+          // Add a small delay to avoid rate limiting
+          await new Promise((resolve) => setTimeout(resolve, 250));
         }
 
-        setProcessedMovies(i + 1);
-        setProgress(((i + 1) / movieLines.length) * 100);
+        setUnmatchedMovies(unmatched);
+        console.log(
+          `Matched ${movies.length} out of ${movieLines.length} movies`
+        );
+        console.log("Unmatched movies:", unmatched);
 
-        // Add a small delay to avoid rate limiting
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        if (movies.length === 0) {
+          throw new Error("No movies were found in the TMDB database");
+        }
+
+        onMoviesImported(movies);
+      } catch (error) {
+        setError(error.message);
+        console.error("Error processing CSV:", error);
+      } finally {
+        setIsProcessing(false);
       }
+    },
+    [onMoviesImported]
+  );
 
-      setUnmatchedMovies(unmatched);
-      console.log(
-        `Matched ${movies.length} out of ${movieLines.length} movies`
-      );
-      console.log("Unmatched movies:", unmatched);
-
-      if (movies.length === 0) {
-        throw new Error("No movies were found in the TMDB database");
+  const onDrop = useCallback(
+    (acceptedFiles) => {
+      if (acceptedFiles.length > 0) {
+        processCSV(acceptedFiles[0]);
       }
-
-      onMoviesImported(movies);
-    } catch (error) {
-      setError(error.message);
-      console.error("Error processing CSV:", error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const onDrop = useCallback((acceptedFiles) => {
-    if (acceptedFiles.length > 0) {
-      processCSV(acceptedFiles[0]);
-    }
-  }, []);
+    },
+    [processCSV]
+  );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -144,11 +148,11 @@ const IMDBImportPage = ({ onMoviesImported }) => {
     disabled: isProcessing,
   });
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     if (!isProcessing) {
       onMoviesImported([]);
     }
-  };
+  }, [isProcessing, onMoviesImported]);
 
   return (
     <div className="max-w-4xl mx-auto p-4 space-y-8">
