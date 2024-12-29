@@ -1,4 +1,4 @@
-# Movie Ranker
+# WatchlistELO
 
 A web application that helps you create ranked lists of movies using the Elo rating system.
 
