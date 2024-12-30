@@ -101,13 +101,12 @@ const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
         </p>
         <button
           onClick={onImportClick}
-          className="px-6 py-3 bg-secondary text-text rounded-lg hover:bg-secondary-hover transition-colors"
+          className="px-6 py-3 bg-secondary text-text-extra rounded-lg hover:bg-secondary-hover transition-colors"
         >
           Import from IMDB
         </button>
       </div>
 
-      {/* Search Section */}
       <div className="relative">
         <div className="relative">
           <input
@@ -182,7 +181,6 @@ const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
         ))}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && (
         <div className="flex justify-center space-x-2">
           <button

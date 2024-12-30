@@ -38,6 +38,7 @@
   --color-background: #ffffff;
   --color-text: #2c3e50;
   --color-text-secondary: #607d8b;
+  --color-text-extra: #607d8b;
   --color-button-hover: #357abd;
   --color-button-disabled: #c5d9f1;
 }
@@ -48,6 +49,7 @@
   --color-background: #2c3e50;
   --color-text: #eceff1;
   --color-text-secondary: #b0bec5;
+  --color-text-extra: #2c3e50;
   --color-button-hover: #0097a7;
   --color-button-disabled: #80deea;
 }
@@ -58,6 +60,7 @@
   --color-background: #f5e6d3;
   --color-text: #2d3142;
   --color-text-secondary: #4f5d75;
+  --color-text-extra: #4f5d75;
   --color-button-hover: #ff8c00;
   --color-button-disabled: #ffd19f;
 }
