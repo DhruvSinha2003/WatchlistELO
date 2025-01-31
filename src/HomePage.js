@@ -13,6 +13,18 @@ const HomePage = ({ onMoviesSelected, onImportClick, initialMovies = [] }) => {
   const moviesPerPage = 20;
 
   useEffect(() => {
+    document.documentElement.classList.add("bg-background");
+    document.body.classList.add("bg-background");
+    document.body.classList.add("min-h-screen");
+
+    return () => {
+      document.documentElement.classList.remove("bg-background");
+      document.body.classList.remove("bg-background");
+      document.body.classList.remove("min-h-screen");
+    };
+  }, []);
+
+  useEffect(() => {
     if (initialMovies.length > 0) {
       setSelectedMovies(initialMovies);
     }

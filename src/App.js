@@ -4,6 +4,7 @@ import EloRankingPage from "./EloRankingPage";
 import HomePage from "./HomePage";
 import IMDBImportPage from "./IMDBImportPage";
 import RankingResultsPage from "./RankingResultsPage";
+import "./styles/scrollbar.css";
 import "./styles/themes.css";
 
 function App() {
@@ -16,10 +17,15 @@ function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
+    document.documentElement.classList.add("custom-scrollbar");
+
+    return () => {
+      document.documentElement.classList.remove("custom-scrollbar");
+    };
   }, [theme]);
 
   useEffect(() => {
-    document.body.className = `font-theme-${fontTheme}`;
+    document.body.className = `font-theme-${fontTheme} custom-scrollbar`;
   }, [fontTheme]);
 
   const handleMoviesSelected = (movies) => {
@@ -85,7 +91,7 @@ function App() {
 
   return (
     <div
-      className="min-h-screen bg-background text-text"
+      className="min-h-screen bg-background text-text custom-scrollbar"
       style={{ fontFamily: "var(--font-body)" }}
     >
       <Header
